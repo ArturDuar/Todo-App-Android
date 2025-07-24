@@ -20,13 +20,9 @@ interface TaskDao {
     @Delete
     suspend fun deleteTask(task: Task)
 
-    @Query("SELECT * FROM tasks_table ORDER BY id DESC")
-    fun getAllTasks(): LiveData<List<Task>> // LiveData para observar cambios automáticamente
+    @Query("SELECT * FROM tasks_table ORDER BY isUrgent DESC, id DESC")
+    fun getAllTasks(): LiveData<List<Task>>
 
     @Query("SELECT * FROM tasks_table WHERE id = :taskId")
     suspend fun getTaskById(taskId: Long): Task?
-
-    // Puedes añadir más consultas según necesites, por ejemplo:
-    // @Query("SELECT * FROM tasks_table WHERE isCompleted = :completed ORDER BY date ASC")
-    // fun getTasksByCompletionStatus(completed: Boolean): LiveData<List<Task>>
 }

@@ -7,14 +7,16 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
 class TaskAdapter(
     private val onTaskCompletedChanged: (task: Task, isCompleted: Boolean) -> Unit,
-    private val onDeleteClicked: (task: Task) -> Unit
-) : ListAdapter<Task, TaskAdapter.TaskViewHolder>(TaskDiffCallback()) { // Hereda de ListAdapter
+    private val onDeleteClicked: (task: Task) -> Unit,
+    private val onItemClick: (task: Task) -> Unit
+) : ListAdapter<Task, TaskAdapter.TaskViewHolder>(TaskDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
         val itemView = LayoutInflater.from(parent.context)
@@ -23,8 +25,9 @@ class TaskAdapter(
     }
 
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
-        val currentTask = getItem(position) // USA getItem(position) con ListAdapter
+        val currentTask = getItem(position)
         holder.bind(currentTask)
+        holder.itemView.setOnClickListener { onItemClick(currentTask) }
     }
 
     inner class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -44,7 +47,9 @@ class TaskAdapter(
             tvDate.text = task.date
 
             if (task.isUrgent) {
-                tvPriority.text = "Alta Prioridad"
+                tvPriority.text = "URGENTE"
+                tvPriority.setBackgroundColor(ContextCompat.getColor(itemView.context, android.R.color.holo_red_dark))
+                tvPriority.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 tvPriority.visibility = View.VISIBLE
             } else {
                 tvPriority.visibility = View.GONE
@@ -55,7 +60,7 @@ class TaskAdapter(
             cbCompleted.text = if (task.isCompleted) "Completado" else "No completado"
 
             cbCompleted.setOnCheckedChangeListener { _, isChecked ->
-                if (task.isCompleted != isChecked) { // Prevenir llamadas innecesarias
+                if (task.isCompleted != isChecked) {
                     onTaskCompletedChanged(task, isChecked)
                 }
             }

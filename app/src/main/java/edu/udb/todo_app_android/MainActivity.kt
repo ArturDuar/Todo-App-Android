@@ -3,7 +3,6 @@ package edu.udb.todo_app_android
 import android.app.Activity
 import android.content.Intent
 import android.os.Build
-import android.os.Parcelable
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,11 +10,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope // Importante para coroutines
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.launch // Importante para coroutines
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,7 +23,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var db: AppDatabase
     private lateinit var taskDao: TaskDao
-    // ---------------------------
 
     private val addTaskResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -32,30 +30,31 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
             if (data != null) {
-                val newTask: Task? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val updatedTask: Task? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     data.getParcelableExtra(AddTaskActivity.EXTRA_TASK, Task::class.java)
                 } else {
                     @Suppress("DEPRECATION")
                     data.getParcelableExtra<Task>(AddTaskActivity.EXTRA_TASK)
                 }
 
-                newTask?.let {
+                updatedTask?.let {
                     lifecycleScope.launch {
-                        taskDao.insertTask(it)
+                        if (it.id != 0L) {
+                            taskDao.updateTask(it)
+                        } else {
+                            taskDao.insertTask(it)
+                        }
                     }
                 }
             }
         }
     }
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdgeIfNeeded()
         setContentView(R.layout.activity_main)
 
-        // Configurar Toolbar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
@@ -69,12 +68,11 @@ class MainActivity : AppCompatActivity() {
         rvTasks = findViewById(R.id.rvTasks)
         val fabAdd = findViewById<FloatingActionButton>(R.id.fabAdd)
 
-        // --- Inicializar Room ---
         db = AppDatabase.getDatabase(applicationContext)
         taskDao = db.taskDao()
 
-        setupRecyclerView() // Configura el adaptador
-        observeTasks()    // Comienza a observar los datos de la base de datos
+        setupRecyclerView()
+        observeTasks()
 
         fabAdd.setOnClickListener {
             val intent = Intent(this, AddTaskActivity::class.java)
@@ -97,9 +95,14 @@ class MainActivity : AppCompatActivity() {
             onDeleteClicked = { task ->
                 lifecycleScope.launch {
                     taskDao.deleteTask(task)
-                    // Opcional: Mostrar un Toast de confirmación
                     Toast.makeText(this@MainActivity, "Tarea eliminada: ${task.title}", Toast.LENGTH_SHORT).show()
                 }
+            },
+            onItemClick = { task ->
+                val intent = Intent(this, AddTaskActivity::class.java).apply {
+                    putExtra("EDIT_TASK", task)
+                }
+                addTaskResultLauncher.launch(intent)
             }
         )
         rvTasks.adapter = taskAdapter

@@ -3,6 +3,7 @@ package edu.udb.todo_app_android
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
@@ -26,6 +27,7 @@ class AddTaskActivity : AppCompatActivity() {
     private lateinit var etCategory: EditText
     private lateinit var cbUrgent: CheckBox
     private val calendar = Calendar.getInstance()
+    private var taskToEdit: Task? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +41,22 @@ class AddTaskActivity : AppCompatActivity() {
 
         val btnCreate = findViewById<Button>(R.id.btn_create)
         val btnBack = findViewById<ImageView>(R.id.btn_back)
+
+        // Verifica si se está editando una tarea
+        taskToEdit = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("EDIT_TASK", Task::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra<Task>("EDIT_TASK")
+        }
+
+        taskToEdit?.let {
+            etTitle.setText(it.title)
+            etDescription.setText(it.description ?: "")
+            etDate.setText(it.date)
+            etCategory.setText(it.category)
+            cbUrgent.isChecked = it.isUrgent
+        }
 
         val dateSetListener = DatePickerDialog.OnDateSetListener { _, year, monthOfYear, dayOfMonth ->
             calendar.set(Calendar.YEAR, year)
@@ -79,7 +97,6 @@ class AddTaskActivity : AppCompatActivity() {
         val category = etCategory.text.toString().trim()
         val isUrgent = cbUrgent.isChecked
 
-        // Validaciones básicas
         if (title.isEmpty()) {
             etTitle.error = "El título es obligatorio"
             etTitle.requestFocus()
@@ -96,8 +113,13 @@ class AddTaskActivity : AppCompatActivity() {
             return
         }
 
-
-        val newTask = Task(
+        val updatedTask = taskToEdit?.copy(
+            title = title,
+            description = description,
+            date = date,
+            category = category,
+            isUrgent = isUrgent
+        ) ?: Task(
             title = title,
             description = description,
             date = date,
@@ -106,7 +128,7 @@ class AddTaskActivity : AppCompatActivity() {
         )
 
         val resultIntent = Intent()
-        resultIntent.putExtra(EXTRA_TASK, newTask)
+        resultIntent.putExtra(EXTRA_TASK, updatedTask)
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
     }
